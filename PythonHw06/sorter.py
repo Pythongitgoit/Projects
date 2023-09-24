@@ -186,6 +186,26 @@ def main_sorting_function(main_directory):
 
     rename_files(main_directory)
 
+    def print_sorted_files(file_dict):
+        result = []
+        for key, value in file_dict.items():
+            if value:
+                result.append(f"{key}: {', '.join(value)}")
+        return result
+
+    if sorted_files_dict:
+        print("Виконано сортування:")
+        for res in print_sorted_files(sorted_files_dict):
+            print(res)
+        print("")
+    else:
+        print("Немає файлів для сортування!\n")
+
+    if known_file_extensions:
+        print(f"Відомі розширення файлів: {known_file_extensions}\n")
+    if unknown_file_extensions:
+        print(f"Невідомі розширення файлів: {unknown_file_extensions}")
+
     def delete_empty_directories(directory_path):
         for item in directory_path.iterdir():
             if item.is_dir():
@@ -199,4 +219,4 @@ def main_sorting_function(main_directory):
 try:
     main_sorting_function(Path(sys.argv[1]))
 except IndexError:
-    print("Вкажіть шлях до папки із файлами!")
+    print("Вкажіть шлях до папки з файлами!")
