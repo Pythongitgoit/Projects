@@ -1,12 +1,16 @@
 import os
 import sys
 import shutil
+import uuid
 import gzip
 import tarfile
 from pathlib import Path
 
 
 def main_sorting_function(main_directory):
+    if not any(main_directory.iterdir()):
+        print("Папка порожня.")
+
     CYRILLIC_SYMBOLS = "абвгдеёжзийклмнопрстуфхцчшщъыьэюяєіїґ "
     TRANSLATION = (
         "a",
@@ -127,7 +131,7 @@ def main_sorting_function(main_directory):
                 if destination_file:
                     sort_file(destination_file, file_type)
                 else:
-                    os.remove(item)
+                    print("problem move_file_to_directory")
 
     sort_files(main_directory)
 
@@ -137,7 +141,7 @@ def main_sorting_function(main_directory):
             archives_folder = folder_path / "archives"
             for archive_file in archives_folder.iterdir():
                 if archive_file.is_file():
-                    output_folder = archive_file.with_suffix("")
+                    output_folder = archive_file.with_suffix("").resolve()
                     if archive_file.suffix == ".gz":
                         with gzip.open(archive_file, "rb") as gz_file:
                             with tarfile.open(fileobj=gz_file, mode="r") as tar:
@@ -150,31 +154,9 @@ def main_sorting_function(main_directory):
 
         extract_archives(main_directory)
 
-        def delete_archives(folder_path):
-            for archive_file in folder_path.iterdir():
-                if archive_file.is_file():
-                    os.remove(archive_file)
-
-        delete_archives(create_directory("archives"))
-
-        def rename_files_in_archives(folder_path):
-            for archive_file in folder_path.iterdir():
-                if archive_file.is_dir():
-                    rename_files_in_archives(archive_file)
-                else:
-                    try:
-                        os.rename(
-                            archive_file,
-                            folder_path / normalize_file_name(archive_file),
-                        )
-                    except Exception:
-                        os.remove(archive_file)
-
-        rename_files_in_archives(main_directory / "archives")
-
     def rename_files(folder_path):
         for folder in folder_path.iterdir():
-            if folder.name in ["images", "videos", "documents", "music"]:
+            if folder.name in ["images", "videos", "documents", "music", "archives"]:
                 for item in folder.iterdir():
                     try:
                         os.rename(item, folder / normalize_file_name(item))
@@ -182,9 +164,38 @@ def main_sorting_function(main_directory):
                         if item.is_dir():
                             shutil.rmtree(item)
                         else:
-                            os.remove(item)
+                            print(print(f"Проблеми з перейменуванням: {item}\n"))
 
     rename_files(main_directory)
+
+    def rename_files_in_archives(folder_path):
+        for archive_file in folder_path.iterdir():
+            if archive_file.is_dir():
+                rename_files_in_archives(archive_file)
+            else:
+                try:
+                    os.rename(
+                        archive_file,
+                        folder_path / normalize_file_name(archive_file),
+                    )
+                except Exception:
+                    print("Problem rename files in archive file")
+
+    rename_files_in_archives(main_directory / "archives")
+
+    def remove_extensions_in_archives(folder_path):
+        for archive_file in folder_path.iterdir():
+            if archive_file.is_dir():
+                remove_extensions_in_archives(archive_file)
+            else:
+                if archive_file.suffix in (".zip", ".tar", ".gz"):
+                    try:
+                        new_name = archive_file.stem
+                        os.rename(archive_file, folder_path / f"{new_name}_{1}")
+                    except Exception:
+                        print("Помилка перейменування архіву")
+
+    remove_extensions_in_archives(main_directory / "archives")
 
     def print_sorted_files(file_dict):
         result = []
@@ -194,7 +205,7 @@ def main_sorting_function(main_directory):
         return result
 
     if sorted_files_dict:
-        print("Виконано сортування:")
+        print("Виконано сортування:\n")
         for res in print_sorted_files(sorted_files_dict):
             print(res)
         print("")
@@ -218,5 +229,5 @@ def main_sorting_function(main_directory):
 
 try:
     main_sorting_function(Path(sys.argv[1]))
-except IndexError:
-    print("Вкажіть шлях до папки з файлами!")
+except FileNotFoundError:
+    print("Вказаний шлях до папки не існує.")
